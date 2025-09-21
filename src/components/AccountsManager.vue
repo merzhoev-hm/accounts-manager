@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useAccountsStore } from '@/stores/accounts'
-import AccountRow from './AccountRow.vue'
+import AccountRow from '@/components/AccountRow.vue'
 
 const store = useAccountsStore()
 const accounts = store.accounts

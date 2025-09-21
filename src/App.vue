@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import AccountsManager from './components/AccountsManager.vue'
+import AccountsManager from '@/components/AccountsManager.vue'
 </script>
 
 <template>

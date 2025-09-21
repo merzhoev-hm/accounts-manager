@@ -6,23 +6,18 @@ import { useAccountForm } from '@/composables/useAccountForm'
 import type { Account } from '@/types'
 
 const props = defineProps<{ account: Account }>()
-const { draft, labelInput, isLabelFocused, saveAuth, saveLabels, remove, showPassword } =
-  useAccountForm(props.account)
+const { draft, labelInput, isLabelFocused, saveAuth, saveLabels, remove } = useAccountForm(
+  props.account,
+)
 
 const labelOk = computed(() => (labelInput.value ?? '').length <= 50)
-const loginOk = computed(
-  () => draft.value.login.trim().length > 0 && draft.value.login.length <= 100,
-)
+const loginOk = computed(() => draft.login.trim().length > 0 && draft.login.length <= 100)
 const passwordOk = computed(
   () =>
-    draft.value.type === 'LDAP' ||
-    (draft.value.passwordLocal.trim().length > 0 && draft.value.passwordLocal.length <= 100),
+    draft.type === 'LDAP' ||
+    (draft.passwordLocal.trim().length > 0 && draft.passwordLocal.length <= 100),
 )
 const authOk = computed(() => loginOk.value && passwordOk.value)
-
-function onLoginInput() {
-  saveAuth()
-}
 
 function onLabelBlur() {
   isLabelFocused.value = false
@@ -65,7 +60,6 @@ function onTypeChange() {
         maxlength="100"
         placeholder="Логин"
         v-model="draft.login"
-        @input="onLoginInput"
       />
     </div>
 
@@ -75,7 +69,6 @@ function onTypeChange() {
         v-model="draft.passwordLocal"
         :maxlength="100"
         :error="!passwordOk"
-        @update:modelValue="() => {}"
       />
       <div v-else class="small-muted">—</div>
     </div>

@@ -1,14 +1,22 @@
-import { ref, watch } from 'vue'
+// src/composables/useAccountForm.ts
+import { ref, reactive, watch } from 'vue'
 import type { Account } from '@/types'
 import { useAccountsStore } from '@/stores/accounts'
 import { parseLabels, labelsToString } from '@/utils/labels'
 
+type DraftAccount = {
+  id: string
+  type: Account['type']
+  login: string
+  passwordLocal: string
+}
+
 export function useAccountForm(account: Account) {
   const store = useAccountsStore()
 
-  const draft = ref({
+  const draft = reactive<DraftAccount>({
     id: account.id,
-    type: account.type as 'Local' | 'LDAP',
+    type: account.type,
     login: account.login ?? '',
     passwordLocal: account.password === null ? '' : (account.password ?? ''),
   })
@@ -17,50 +25,64 @@ export function useAccountForm(account: Account) {
   const isLabelFocused = ref(false)
   const showPassword = ref(false)
 
+  // Синхронизируем draft с внешним account, но не затираем labelInput, если юзер редактирует
   watch(
     () => account,
     (newA) => {
-      draft.value.type = newA.type
-      draft.value.login = newA.login
-      draft.value.passwordLocal = newA.password === null ? '' : (newA.password ?? '')
-      if (!isLabelFocused.value) labelInput.value = labelsToString(newA.labels)
+      draft.type = newA.type
+      draft.login = newA.login ?? ''
+      draft.passwordLocal = newA.password === null ? '' : (newA.password ?? '')
+      if (!isLabelFocused.value) {
+        labelInput.value = labelsToString(newA.labels)
+      }
     },
     { deep: true },
   )
 
+  // Валидации (простые)
   function validateLogin() {
-    const ok = draft.value.login.trim().length > 0 && draft.value.login.length <= 100
-    return ok
+    return draft.login.trim().length > 0 && draft.login.length <= 100
   }
   function validatePassword() {
-    if (draft.value.type === 'LDAP') return true
-    return draft.value.passwordLocal.trim().length > 0 && draft.value.passwordLocal.length <= 100
-  }
-  function validateLabelLength(max = 50) {
-    return (labelInput.value ?? '').length <= max
+    if (draft.type === 'LDAP') return true
+    return draft.passwordLocal.trim().length > 0 && draft.passwordLocal.length <= 100
   }
 
+  // Сохраняем auth-поля в стор (type, login, password)
   function saveAuth() {
-    if (!validateLogin() || !validatePassword()) return false
-    store.updateAccount(draft.value.id, {
-      type: draft.value.type,
-      login: draft.value.login,
-      password: draft.value.type === 'LDAP' ? null : draft.value.passwordLocal,
+    if (!validateLogin() || !validatePassword()) return
+    store.updateAccount(draft.id, {
+      type: draft.type,
+      login: draft.login,
+      password: draft.type === 'LDAP' ? null : draft.passwordLocal,
     })
-    return true
   }
 
-  function saveLabels() {
-    if (!validateLabelLength()) return false
-    const labels = parseLabels(labelInput.value)
-    store.updateAccount(draft.value.id, { labels })
+  // --- САМЫЙ ВАЖНЫЙ ПРИЁМ: watchers, которые автоматически сохраняют при изменении ---
+  // Не используем immediate: не хотим лишних write при инициализации
+  watch(
+    () => draft.login,
+    () => saveAuth(),
+  )
+  watch(
+    () => draft.passwordLocal,
+    () => saveAuth(),
+  )
+  watch(
+    () => draft.type,
+    () => saveAuth(),
+  )
 
+  // Метки — сохраняем при blur (или явно через saveLabels)
+  function saveLabels() {
+    if (labelInput.value == null) return
+    const labels = parseLabels(labelInput.value)
+    store.updateAccount(draft.id, { labels })
     labelInput.value = labelsToString(labels)
-    return true
   }
 
   function remove() {
-    store.removeAccount(draft.value.id)
+    store.removeAccount(draft.id)
   }
 
   return {

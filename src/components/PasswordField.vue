@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+
+const model = defineModel<string>()
+
 const props = defineProps({
-  modelValue: String,
   maxlength: { type: Number, default: 100 },
   placeholder: { type: String, default: 'Пароль' },
   error: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:modelValue'])
 const visible = ref(false)
 </script>
 
@@ -16,10 +17,9 @@ const visible = ref(false)
       :type="visible ? 'text' : 'password'"
       class="input"
       :class="{ error }"
-      :maxlength="maxlength"
-      :placeholder="placeholder"
-      :value="modelValue"
-      @input="$emit('update:modelValue', $event.target.value)"
+      :maxlength="props.maxlength"
+      :placeholder="props.placeholder"
+      v-model="model"
     />
     <button
       type="button"
